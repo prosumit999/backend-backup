@@ -114,13 +114,13 @@ const SMS_TEMPLATES = {
     },
   },
 
-  // T4 — DLT: Dear {#var#}, pigmy collection received. {#var#}. - ABHISHEK FINANCE | SANDHYA SOFTTECH PRIVATE LIMITED
-  // VAR2 = merged: "Rs.{amount} on {date}. Rcpt:{receipt}. Bal:Rs.{balance}"
+  // T4 — DLT: Dear {#var#}, Your  Pigmy Collection Received. {#var#}. - ABHISHEK FINANCE | SANDHYA SOFTTECH PRIVATE LIMITED
+  // VAR2 = merged: "Amout Rs.{amount} On {date}. Rcpt:{receipt}. Bal:Rs.{balance}"
   COLLECTION_RECEIPT: {
     dltTemplateId: process.env.MSG91_TEMPLATE_COLLECTION,
     variableCount: 2, // [name, mergedDetail]
     build: function (name, detail, brand) {
-      return "Dear " + name + ", pigmy collection received. " + detail + ". - " + brand;
+      return "Dear " + name + ",Your Pigmy Collection Received. " + detail + ". - " + brand;
     },
   },
 
@@ -688,4 +688,4 @@ module.exports = {
   sendMissedPenaltyApplied,
   sendLifelineAdminAdjusted,
   sendInternalTransfer,
-};
+};

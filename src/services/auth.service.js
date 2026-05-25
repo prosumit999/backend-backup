@@ -203,14 +203,9 @@ const refreshAccessToken = async ({
     throw ApiError.forbidden("Account deactivated. Contact admin.");
 
   if (user.isLocked()) {
-    const lockedUntil = new Date(user.lockUntil).toLocaleTimeString("en-IN", {
-      timeZone: "Asia/Kolkata",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
     throw new ApiError(
       423,
-      `Account locked. Try again after ${lockedUntil} IST.`,
+      "Next login will be in 2 minutes.",
     );
   }
 

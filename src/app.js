@@ -74,32 +74,48 @@ app.use((_req, res, next) => {
 });
 
 // ─── 3. CORS ──────────────────────────────────────────────
+
+// ─── 3. CORS ──────────────────────────────────────────────
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow server-to-server / Postman (no Origin header)
+      // Allow requests without Origin (Postman, server-to-server)
       if (!origin) return callback(null, true);
 
-      const allowed = env.ALLOWED_ORIGINS; // string[] from env.js
-      if (
-        (Array.isArray(allowed) && allowed.includes(origin)) ||
-        allowed === "*"
-      ) {
+      const allowed = [
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "http://abhishekfinance.cloud",
+        "https://abhishekfinance.cloud",
+      ];
+
+      if (allowed.includes(origin)) {
         return callback(null, true);
       }
 
       logger.warn(`[CORS] Blocked origin: ${origin}`);
+
       callback(
-        new ApiError(403, `CORS blocked: Origin '${origin}' is not allowed.`),
+        new ApiError(
+          403,
+          `CORS blocked: Origin '${origin}' is not allowed.`,
+        ),
       );
     },
+
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
-    allowedHeaders: ["Content-Type", "Authorization", "Idempotency-Key", "X-Client-Type", "x-client-type", "idempotency-key"],
+
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "Idempotency-Key",
+      "X-Client-Type",
+    ],
+
     credentials: true,
   }),
 );
 
-// ─── 4. Body Parsing ──────────────────────────────────────
 app.use(express.json({ limit: "10kb" }));
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: false, limit: "10kb" }));
