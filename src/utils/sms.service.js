@@ -592,9 +592,9 @@ const sendPigmyAccountClosed = function (phone, name, accountNumber, balanceRetu
 };
 
 // Loans (T11-T14)
-// VAR2 example: "A/C:LN0012345 Amt:Rs.50000" (26 chars ✅)
+// VAR2 example: "A/C:LOAN-2026-00001 Rs.1780" (27 chars ✅)
 const sendLoanDisbursed = function (phone, name, amount, loanNo) {
-  var merged = "A/C:" + loanNo + " Amt:Rs." + amount;
+  var merged = "A/C:" + loanNo + " Rs." + amount;
   return sendSms({ phone: phone, templateKey: "LOAN_DISBURSED", variables: [name, merged.slice(0, 30)] });
 };
 // VAR2 example: "Loan:LN001 EMI:2500 Due:47500" (29 chars ✅) — loanNo truncated to 5
