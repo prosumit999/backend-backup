@@ -641,7 +641,7 @@ const createLoan = async ({
     .sendLoanDisbursed(
       savingAccount.customer.phone,
       savingAccount.customer.name,
-      String(netDisbursalInPaise),
+      (netDisbursalInPaise / 100).toFixed(0),
       loanAccountNumber,
     )
     .catch((e) =>
