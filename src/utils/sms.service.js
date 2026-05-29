@@ -555,14 +555,14 @@ const sendCollectionReceipt = function (phone, name, amount, date, receipt, bala
 };
 
 // Saving Account (T5-T8 — merge fields into VAR2)
-// VAR2 example: "A/C:SAV0012345 Charge:Rs.100" (28 chars ✅)
+// VAR2 example: "A/C:SAV-2026-00001 Rs.100" (25 chars ✅)
 const sendSavingAccountOpened = function (phone, name, accountNumber, openingCharge) {
-  var merged = "A/C:" + accountNumber + " Charge:Rs." + openingCharge;
+  var merged = "A/C:" + accountNumber + " Rs." + openingCharge;
   return sendSms({ phone: phone, templateKey: "SAVING_ACCOUNT_OPENED", variables: [name, merged.slice(0, 30)] });
 };
-// VAR2 example: "A/C:SAV0012345 Bal:Rs.5000" (26 chars ✅)
+// VAR2 example: "A/C:SAV-2026-00001 Bal:50000" (28 chars ✅)
 const sendSavingAccountClosed = function (phone, name, accountNumber, balanceReturned) {
-  var merged = "A/C:" + accountNumber + " Bal:Rs." + balanceReturned;
+  var merged = "A/C:" + accountNumber + " Bal:" + balanceReturned;
   return sendSms({ phone: phone, templateKey: "SAVING_ACCOUNT_CLOSED", variables: [name, merged.slice(0, 30)] });
 };
 // VAR2 example: "A/C:SAV001 Rs.1000 Bal:6000" (27 chars ✅) — date dropped, acct truncated to 6
@@ -585,9 +585,9 @@ const sendPigmyAccountOpened = function (phone, name, accountNumber, dailyDeposi
   var merged = "A/C:" + acc + " Daily:Rs." + dailyDeposit + " " + frequency;
   return sendSms({ phone: phone, templateKey: "PIGMY_ACCOUNT_OPENED", variables: [name, merged.slice(0, 30)] });
 };
-// VAR2 example: "A/C:PIG0012345 Bal:Rs.18250" (27 chars ✅)
+// VAR2 example: "A/C:PGM-2026-00001 Bal:18250" (28 chars ✅)
 const sendPigmyAccountClosed = function (phone, name, accountNumber, balanceReturned) {
-  var merged = "A/C:" + accountNumber + " Bal:Rs." + balanceReturned;
+  var merged = "A/C:" + accountNumber + " Bal:" + balanceReturned;
   return sendSms({ phone: phone, templateKey: "PIGMY_ACCOUNT_CLOSED", variables: [name, merged.slice(0, 30)] });
 };
 
