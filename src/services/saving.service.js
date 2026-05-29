@@ -257,7 +257,7 @@ const createSavingAccount = async ({
       customer.phone,
       customer.name,
       accountNumber,
-      (openingChargeInPaise / 100).toFixed(0),
+      String(openingChargeInPaise),
     )
     .catch((e) => logger.warn(`[Saving] SMS failed: ${e.message}`));
 
