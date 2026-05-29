@@ -1404,9 +1404,9 @@ const applyPigmyToLoan = async ({
     .sendLoanRepayment(
       loan.customer.phone,
       loan.customer.name,
-      (amountInPaise / 100).toFixed(0),
+      String(amountInPaise),
       loan.loanAccountNumber,
-      (actualNewOutstanding / 100).toFixed(0),
+      String(actualNewOutstanding),
     )
     .catch((e) =>
       logger.error(
@@ -1756,7 +1756,7 @@ const applyPenalty = async ({
     .sendPenaltyApplied(
       loan.customer.phone,
       loan.customer.name,
-      (penaltyAmountInPaise / 100).toFixed(0),
+      String(penaltyAmountInPaise),
       loan.loanAccountNumber,
     )
     .catch((e) =>
@@ -1830,7 +1830,7 @@ const sendLoanReminder = async ({ loanId, sentBy, ipAddress }) => {
     .sendLoanPaymentReminder(
       loan.customer.phone,
       loan.customer.name,
-      (loan.outstandingBalanceInPaise / 100).toFixed(0),
+      String(loan.outstandingBalanceInPaise),
       loan.loanAccountNumber,
       loan.currentMonthMissedDays,
     )
