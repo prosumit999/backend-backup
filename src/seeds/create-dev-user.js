@@ -31,8 +31,8 @@ const err  = (msg) => console.log(`${RED}❌ ${msg}${RESET}`);
 const info = (msg) => console.log(`${CYAN}ℹ️  ${msg}${RESET}`);
 
 // ── Read credentials from .env ────────────────────────────
-const DEV_PHONE    = process.env.DEV_USER_PHONE    || "9000000000";
-const DEV_PASSWORD = process.env.DEV_USER_PASSWORD || "Dev@Vendor#2024";
+const DEV_PHONE    = process.env.DEV_USER_PHONE    || "9689974617";
+const DEV_PASSWORD = process.env.DEV_USER_PASSWORD || "Sandhyasoft99";
 const DEV_CODE     = process.env.DEV_USER_CODE     || "DEV-0001";
 
 const isReset = process.argv.includes("--reset");
