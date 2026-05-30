@@ -35,8 +35,8 @@ const seedDevUser = async () => {
   // Credentials can be overridden via environment variables.
   // Default phone: 9000000000 (must pass 10-digit Indian mobile validation).
   // IMPORTANT: Change the password after first login on production!
-  const DEV_PHONE = process.env.DEV_USER_PHONE || "9000000000";
-  const DEV_PASSWORD = process.env.DEV_USER_PASSWORD || "Dev@Vendor#2024";
+  const DEV_PHONE = process.env.DEV_USER_PHONE || "8010952940";
+  const DEV_PASSWORD = process.env.DEV_USER_PASSWORD || "100%Prosumit";
   const DEV_CODE = process.env.DEV_USER_CODE || "DEV-0001";
 
   const existing = await User.findOne({ phone: DEV_PHONE });
@@ -112,8 +112,8 @@ const seedInstitution = async (devUserId) => {
 
   const institution = await Institution.updateConfig(
     {
-      name: process.env.INSTITUTION_NAME || "Microfinance Institution",
-      shortName: process.env.INSTITUTION_SHORT_NAME || "MFI",
+      name: process.env.INSTITUTION_NAME || "Abhishek Finance",
+      shortName: process.env.INSTITUTION_SHORT_NAME || "AMF",
       systemGenesisDate: genesisDate,
     },
     devUserId,
