@@ -64,22 +64,22 @@ const seedDevUser = async () => {
 const seedSuperAdmin = async () => {
   info("Seeding superadmin...");
 
-  const existing = await User.findOne({ phone: "9999999999" });
+  const existing = await User.findOne({ phone: "7719977794" });
   if (existing) {
     warn("Superadmin already exists — skipping");
     return existing;
   }
 
   const admin = await User.create({
-    name: "Super Admin",
-    phone: "9999999999",
-    password: "Admin@1234",
+    name: "Aniket Devne SuperAdmin (Owner)",
+    phone: "7719977794",
+    password: "Superadmin@@aniketdevne99",
     role: ROLES.SUPERADMIN || "superadmin",
     isActive: true,
     agentCode: null,
   });
 
-  log("Superadmin created | Phone: 9999999999 | Password: Admin@1234");
+  log("Superadmin created | Phone: 7719977794 | Password: Superadmin@@aniketdevne99");
   return admin;
 };
 
