@@ -71,15 +71,15 @@ const seedSuperAdmin = async () => {
   }
 
   const admin = await User.create({
-    name: "Aniket Devne SuperAdmin (Owner)",
-    phone: "7719977794",
-    password: "Superadmin@@aniketdevne99",
+    name: "Sai Finance Superadmin",
+    phone: "9130307066",
+    password: "Superadmin@1234",
     role: ROLES.SUPERADMIN || "superadmin",
     isActive: true,
     agentCode: null,
   });
 
-  log("Superadmin created | Phone: 7719977794 | Password: Superadmin@@aniketdevne99");
+  log("Superadmin created | Phone: 9130307066 | Password: Superadmin@1234");
   return admin;
 };
 
