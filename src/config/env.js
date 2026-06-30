@@ -50,6 +50,10 @@ const _env = {
   GOOGLE_DRIVE_PRIVATE_KEY: process.env.GOOGLE_DRIVE_PRIVATE_KEY || null,
   GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON_BASE64:
     process.env.GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON_BASE64 || null,
+  BACKUP_DAILY_ENABLED: process.env.BACKUP_DAILY_ENABLED !== "false",
+  BACKUP_ON_STARTUP: process.env.BACKUP_ON_STARTUP === "true",
+  BACKUP_STARTUP_DELAY_MS:
+    parseInt(process.env.BACKUP_STARTUP_DELAY_MS, 10) || 15000,
 
   // ── Rate Limiting ─────────────────────────────────────────────────────────
   RATE_LIMIT_WINDOW_MS:

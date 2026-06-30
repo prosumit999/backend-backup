@@ -25,6 +25,7 @@ const LOCK_KEYS = Object.freeze({
   RECONCILE: "CRON_LOCK_RECONCILE",
   MISSED_DAY_TRACKING: "CRON_LOCK_MISSED_DAY_TRACKING",
   DEFICIT_WARNING: "CRON_LOCK_DEFICIT_WARNING", // pigmy collection deficit warning cron
+  BACKUP: "CRON_LOCK_BACKUP",
 });
 
 // ─────────────────────────────────────────────────────────────────────────────

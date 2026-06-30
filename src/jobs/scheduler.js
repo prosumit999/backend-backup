@@ -10,6 +10,7 @@
 const mongoose = require("mongoose");
 const cron = require("node-cron");
 const logger = require("../utils/logger");
+const env = require("../config/env");
 const AppConfig = require("../models/AppConfig.model");
 const AuditLog = require("../models/AuditLog.model");
 const {
@@ -21,6 +22,7 @@ const { runPenaltyAndOverdueJob } = require("./penaltyAndOverdue.job");
 const { runMissedDayTrackingJob } = require("./missedDayTracking.job");
 const { runReconcileJob } = require("./reconcile.job");
 const { runDeficitWarningJob } = require("./deficitWarning.job");
+const { runBackupJob } = require("./backup.job");
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SYSTEM PERFORMER — consistent with penaltyAndOverdue.job.js
@@ -44,6 +46,7 @@ const jobRunning = {
   penalty: false,
   missedDay: false,
   reconcile: false,
+  backup: false,
   deficitWarning: false, // pigmy deficit warning — runs at 10:30 PM IST
 };
 
@@ -195,11 +198,63 @@ const scheduleReconcileJob = () => {
 };
 
 // ── START — called once from server.js after DB connection is ready ────────────
+// JOB 5: GOOGLE DRIVE BACKUP -- 1:00 AM IST
+const scheduleBackupJob = () => {
+  if (!env.BACKUP_DAILY_ENABLED) {
+    logger.info("[Scheduler] Daily Google Drive backup disabled.");
+    return;
+  }
+
+  cron.schedule(
+    "0 1 * * *",
+    async () => {
+      logger.info("[Scheduler] Google Drive backup job triggered at 01:00 IST");
+
+      if (jobRunning.backup) {
+        logger.warn("[Scheduler] Backup job SKIPPED -- previous run still in progress.");
+        return;
+      }
+
+      jobRunning.backup = true;
+      try {
+        await runBackupJob({ trigger: "scheduled" });
+      } catch (err) {
+        logger.error(`[Scheduler] Backup job failed: ${err.message}`);
+      } finally {
+        jobRunning.backup = false;
+      }
+    },
+    { timezone: "Asia/Kolkata" },
+  );
+};
+
+const runStartupBackup = () => {
+  if (!env.BACKUP_ON_STARTUP) return;
+
+  setTimeout(async () => {
+    if (jobRunning.backup) {
+      logger.warn("[Scheduler] Startup backup SKIPPED -- backup already running.");
+      return;
+    }
+
+    jobRunning.backup = true;
+    try {
+      await runBackupJob({ trigger: "startup" });
+    } catch (err) {
+      logger.error(`[Scheduler] Startup backup failed: ${err.message}`);
+    } finally {
+      jobRunning.backup = false;
+    }
+  }, env.BACKUP_STARTUP_DELAY_MS).unref();
+};
+
 const startScheduler = () => {
   schedulePenaltyJob();
   scheduleMissedDayTrackingJob();
   scheduleDeficitWarningJob();
   scheduleReconcileJob();
+  scheduleBackupJob();
+  runStartupBackup();
 
   AuditLog.log({
     performedBy: SYSTEM_PERFORMER_ID,
@@ -213,13 +268,15 @@ const startScheduler = () => {
         "MISSED_DAY_22:00_IST",
         "DEFICIT_WARNING_22:30_IST",
         "RECONCILE_23:00_IST",
+        "BACKUP_01:00_IST",
       ],
+      backupOnStartup: env.BACKUP_ON_STARTUP,
     },
     startedAt: new Date(),
     status: AUDIT_STATUS.SUCCESS, // ← use constant not raw string
   }).catch((e) => logger.error(`[Scheduler] Audit failed: ${e.message}`));
 
-  logger.info(`[Scheduler] All 4 jobs initialized | PID: ${process.pid}`);
+  logger.info(`[Scheduler] All jobs initialized | PID: ${process.pid}`);
 };
 
 module.exports = { startScheduler };
