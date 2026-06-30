@@ -71,15 +71,18 @@ const seedSuperAdmin = async () => {
   }
 
   const admin = await User.create({
-    name: "Sai Finance Superadmin",
-    phone: "9130307066",
-    password: "Superadmin@1234",
+    name: process.env.ADMIN_Name,
+    phone: process.env.ADMIN_Phone,
+    password: process.env.ADMIN_PASS,  
     role: ROLES.SUPERADMIN || "superadmin",
     isActive: true,
     agentCode: null,
   });
 
-  log("Superadmin created | Phone: 9130307066 | Password: Superadmin@1234");
+  console.log(process.env.ADMIN_Name + "Admin Created");
+  console.log(process.env.ADMIN_Phone + "Admin with this phone created");
+  console.log(process.env.ADMIN_PASS + "Admin With This Pass Created"
+  )
   return admin;
 };
 
