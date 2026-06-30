@@ -100,6 +100,10 @@ const uploadLogo = createUploader({
   imagesOnly: true,
   maxSizeMB: 2,
   fields: [{ name: "file", maxCount: 1 }],
+  includeEntityFolder: false,
+  includeFieldSubfolder: false,
+  publicId: "institution_logo",
+  overwrite: true,
 });
 
 module.exports = {
