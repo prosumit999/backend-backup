@@ -31,6 +31,10 @@ const createUploader = ({
   maxSizeMB = 5,
   allowPdf = true,
   imagesOnly = false,
+  includeEntityFolder = true,
+  includeFieldSubfolder = true,
+  publicId,
+  overwrite = false,
 }) => {
   if (!folder) throw new Error("createUploader: folder is required");
   if (!fields?.length)
@@ -63,12 +67,21 @@ const createUploader = ({
 
       const subfolder = subfolderMap[file.fieldname] ?? file.fieldname;
       const resourceType = getResourceType(file.mimetype);
+      const folderParts = [BASE_FOLDER, folder];
+
+      if (includeEntityFolder) folderParts.push(entityCode);
+      if (includeFieldSubfolder) folderParts.push(subfolder);
 
       return {
-        folder: `${BASE_FOLDER}/${folder}/${entityCode}/${subfolder}`,
-        public_id: `${entityCode}_${subfolder}`,
+        folder: folderParts.join("/"),
+        public_id:
+          typeof publicId === "function"
+            ? publicId({ req, file, entityCode, subfolder })
+            : publicId || `${entityCode}_${subfolder}`,
         resource_type: resourceType,
         allowed_formats: allowedFormats,
+        overwrite,
+        invalidate: overwrite,
         transformation:
           resourceType === "image"
             ? [{ quality: "auto", fetch_format: "auto" }]
