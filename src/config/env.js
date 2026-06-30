@@ -44,6 +44,12 @@ const _env = {
   CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY,
   CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET,
   CLOUDINARY_BASE_FOLDER: process.env.CLOUDINARY_BASE_FOLDER || "kycdocs",
+  GOOGLE_DRIVE_FOLDER_ID: process.env.GOOGLE_DRIVE_FOLDER_ID || null,
+  GOOGLE_DRIVE_SERVICE_ACCOUNT_EMAIL:
+    process.env.GOOGLE_DRIVE_SERVICE_ACCOUNT_EMAIL || null,
+  GOOGLE_DRIVE_PRIVATE_KEY: process.env.GOOGLE_DRIVE_PRIVATE_KEY || null,
+  GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON_BASE64:
+    process.env.GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON_BASE64 || null,
 
   // ── Rate Limiting ─────────────────────────────────────────────────────────
   RATE_LIMIT_WINDOW_MS:
