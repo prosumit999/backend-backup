@@ -79,23 +79,17 @@ const recordCapitalInfusion = asyncHandler(async (req, res) => {
   let result = {};
 
   await withTransaction(async (session) => {
-    // ── Single createDoublePair call ─────────────────────────────────────────
-    //    DR Cash (1001) — debit-normal asset   → debit increases balance
-    //    CR Owner's Capital (5002) — credit-normal equity → credit increases balance
-    await LedgerEntry.createDoublePair({
-      debitLedgerAccount:  cashAccount,
-      creditLedgerAccount: capitalAccount,
-      amountInPaise,
-      description: `Capital Infusion | ₹${(amountInPaise / 100).toFixed(2)} | DR Cash | CR Owner's Capital`,
-      narration,
-      transactionRef: transactionId,
-      performedBy,
-      businessDate,
-      session,
-    });
+    // Re-read cash inside the transaction so balanceAfterInPaise is based on
+    // the same snapshot as the ledger update.
+    const freshCashAccount = await LedgerAccount.findById(cashAccount._id)
+      .session(session)
+      .lean();
+    const balanceAfterInPaise =
+      freshCashAccount.runningBalanceInPaise + amountInPaise;
 
-    // ── Audit transaction stub ────────────────────────────────────────────────
-    await Transaction.create(
+    // Create the transaction first so the immutable ledger entries can point
+    // back to it.
+    const [transaction] = await Transaction.create(
       [{
         transactionId,
         type:             TRANSACTION_TYPES.CAPITAL_INFUSION,
@@ -103,6 +97,7 @@ const recordCapitalInfusion = asyncHandler(async (req, res) => {
         amountInPaise,
         netAmountInPaise: amountInPaise,
         feeInPaise:       0,
+        balanceAfterInPaise,
         paymentMode,
         note:             narration,
         reference:        ref !== transactionId ? ref : null,
@@ -112,10 +107,27 @@ const recordCapitalInfusion = asyncHandler(async (req, res) => {
       { session }
     );
 
+    // ── Single createDoublePair call ─────────────────────────────────────────
+    //    DR Cash (1001) — debit-normal asset   → debit increases balance
+    //    CR Owner's Capital (5002) — credit-normal equity → credit increases balance
+    await LedgerEntry.createDoublePair({
+      debitLedgerAccount:  freshCashAccount,
+      creditLedgerAccount: capitalAccount,
+      amountInPaise,
+      description: `Capital Infusion | ₹${(amountInPaise / 100).toFixed(2)} | DR Cash | CR Owner's Capital`,
+      narration,
+      transaction: transaction._id,
+      transactionRef: transactionId,
+      performedBy,
+      businessDate,
+      session,
+    });
+
     result = {
       transactionId,
       amountInPaise,
       amountInRupees:   amtNum,
+      balanceAfterInPaise,
       cashGlCode:       "1001",
       capitalGlCode:    "5002",
       paymentMode,
