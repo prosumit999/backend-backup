@@ -43,14 +43,19 @@ const recordCapitalInfusion = asyncHandler(async (req, res) => {
   const amountInPaise = Math.round(amtNum * 100);
 
   // Business day must be open
-  const config = await AppConfig.getConfig();
-  if (!config.isDayOpen) {
+  const [isDayOpen, currentBusinessDate] = await Promise.all([
+    AppConfig.isDayOpen(),
+    AppConfig.getCurrentBusinessDate(),
+  ]);
+
+  if (!isDayOpen) {
     throw new ApiError(
       400,
       "Business day is closed. Open the business day before recording capital infusions."
     );
   }
-  const businessDate = config.currentBusinessDate || new Date();
+
+  const businessDate = currentBusinessDate || new Date();
 
   // Fetch both GL accounts (lean — createDoublePair needs _id + normalBalance)
   const [cashAccount, capitalAccount] = await Promise.all([
