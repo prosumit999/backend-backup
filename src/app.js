@@ -85,8 +85,8 @@ app.use(
       const allowed = [
         "http://localhost:5173",
         "http://localhost:3000",
-        "http://abhishekfinance.cloud",
-        "https://abhishekfinance.cloud",
+        "https://demofin.sandhyasofttech.com",
+        "http://demofin.sandhyasofttech.com",
       ];
 
       if (allowed.includes(origin)) {
