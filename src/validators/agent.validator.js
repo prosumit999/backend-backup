@@ -326,4 +326,3 @@ module.exports = {
   verifyAgentCreationOtpSchema,
   handoverPortfolioSchema,
 };
-

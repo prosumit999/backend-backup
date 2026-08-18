@@ -57,6 +57,7 @@ const auditPii = async (payload) => {
 const createCustomer = async ({
   name,
   phone,
+  email,
   alternatePhone,
   address,
   city,
@@ -88,11 +89,29 @@ const createCustomer = async ({
     throw ApiError.conflict(`Phone ${maskPhone(phone)} is already registered.`);
   }
 
+  const normalizedEmail = email?.trim().toLowerCase();
+  if (normalizedEmail) {
+    const emailExists = await Promise.all([
+      User.findOne({ email: normalizedEmail })
+        .setOptions({ _skipDeletedFilter: true })
+        .select("_id")
+        .lean(),
+      Customer.findOne({ email: normalizedEmail })
+        .setOptions({ _skipDeletedFilter: true })
+        .select("_id")
+        .lean(),
+    ]);
+    if (emailExists.some(Boolean)) {
+      throw ApiError.conflict("This email address is already registered.");
+    }
+  }
+
   let customer;
   try {
     customer = await Customer.create({
       name,
       phone,
+      email: normalizedEmail || undefined,
       alternatePhone: alternatePhone || undefined,
       address,
       city: city || undefined,
@@ -108,6 +127,9 @@ const createCustomer = async ({
       throw ApiError.conflict(
         `Phone ${maskPhone(phone)} is already registered.`,
       );
+    }
+    if (e.code === 11000 && e.keyPattern?.email) {
+      throw ApiError.conflict("This email address is already registered.");
     }
     throw e;
   }

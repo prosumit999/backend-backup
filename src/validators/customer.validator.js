@@ -26,6 +26,13 @@ const createCustomerSchema = Joi.object({
     "string.min": "Name must be at least 2 characters",
   }),
   phone,
+  email: Joi.string()
+    .trim()
+    .lowercase()
+    .email({ tlds: { allow: false } })
+    .optional()
+    .allow("")
+    .messages({ "string.email": "Enter a valid email address" }),
   alternatePhone: Joi.string()
     .trim()
     .pattern(/^[6-9]\d{9}$/)
