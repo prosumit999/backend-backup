@@ -1,8 +1,9 @@
 "use strict";
 
-const { Readable } = require("stream");
-const ExcelJS = require("exceljs");
-const { google } = require("googleapis");
+const fs = require("fs/promises");
+const path = require("path");
+const { randomBytes, createHmac, timingSafeEqual } = require("crypto");
+const nodemailer = require("nodemailer");
 const env = require("../config/env");
 const ApiError = require("../utils/ApiError");
 
@@ -22,7 +23,7 @@ const AppConfig = require("../models/AppConfig.model");
 const Institution = require("../models/Institution.model");
 const AuditLog = require("../models/AuditLog.model");
 
-const BACKUP_SHEETS = [
+const BACKUP_COLLECTIONS = [
   { name: "Customers", model: Customer, sort: { createdAt: 1 } },
   { name: "Saving Accounts", model: SavingAccount, sort: { createdAt: 1 } },
   { name: "Pigmy Accounts", model: PigmyAccount, sort: { createdAt: 1 } },
@@ -57,168 +58,141 @@ const SENSITIVE_KEYS = new Set([
   "panSearchHash",
 ]);
 
-const buildBackupFileName = () => {
-  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-  return `afs-backup-${stamp}.xlsx`;
+// Preserve nested JSON while excluding the same sensitive fields as the old export.
+const sanitize = (value) => {
+  if (Array.isArray(value)) return value.map(sanitize);
+  if (!value || typeof value !== "object" || value instanceof Date ||
+      Buffer.isBuffer(value) || value._bsontype) return value;
+  return Object.fromEntries(Object.entries(value)
+    .filter(([key]) => !SENSITIVE_KEYS.has(key))
+    .map(([key, nested]) => [key, sanitize(nested)]));
 };
 
-const normalizeValue = (value) => {
-  if (value === undefined || value === null) return "";
-  if (value instanceof Date) return value.toISOString();
-  if (Buffer.isBuffer(value)) return value.toString("base64");
-  if (typeof value === "object" && value._bsontype === "ObjectId") {
-    return value.toString();
-  }
-  if (typeof value === "object") return JSON.stringify(value);
-  return value;
-};
+const backupDirectory = () => path.resolve(env.BACKUP_STORAGE_DIR);
+const filePath = (id) => path.join(backupDirectory(), `afs-backup-${id}.json`);
+const retentionMs = () => env.BACKUP_LINK_TTL_HOURS * 60 * 60 * 1000;
 
-const flattenObject = (input, prefix = "", output = {}) => {
-  if (!input || typeof input !== "object") return output;
-
-  for (const [key, value] of Object.entries(input)) {
-    if (SENSITIVE_KEYS.has(key)) continue;
-
-    const path = prefix ? `${prefix}.${key}` : key;
-
-    if (
-      value &&
-      typeof value === "object" &&
-      !(value instanceof Date) &&
-      !Buffer.isBuffer(value) &&
-      value._bsontype !== "ObjectId" &&
-      !Array.isArray(value)
-    ) {
-      flattenObject(value, path, output);
-    } else {
-      output[path] = normalizeValue(value);
+const cleanupExpiredBackups = async () => {
+  await fs.mkdir(backupDirectory(), { recursive: true, mode: 0o700 });
+  for (const name of await fs.readdir(backupDirectory())) {
+    if (!/^afs-backup-[a-f0-9]{48}\.json$/.test(name)) continue;
+    const target = path.join(backupDirectory(), name);
+    try {
+      const stat = await fs.stat(target);
+      if (Date.now() - stat.mtimeMs > retentionMs()) await fs.unlink(target);
+    } catch (error) {
+      if (error.code !== "ENOENT") throw error;
     }
   }
-
-  return output;
 };
 
-const addSheet = (workbook, sheetName, rows) => {
-  const worksheet = workbook.addWorksheet(sheetName.slice(0, 31));
-  const flatRows = rows.map((row) => flattenObject(row));
-  const headers = Array.from(
-    flatRows.reduce((set, row) => {
-      Object.keys(row).forEach((key) => set.add(key));
-      return set;
-    }, new Set()),
-  );
-
-  if (!headers.length) {
-    worksheet.addRow(["No records"]);
-    return;
-  }
-
-  worksheet.columns = headers.map((header) => ({
-    header,
-    key: header,
-    width: Math.min(Math.max(header.length + 2, 14), 45),
-  }));
-
-  worksheet.getRow(1).font = { bold: true };
-  worksheet.views = [{ state: "frozen", ySplit: 1 }];
-  worksheet.autoFilter = {
-    from: { row: 1, column: 1 },
-    to: { row: 1, column: headers.length },
-  };
-
-  for (const row of flatRows) {
-    worksheet.addRow(row);
-  }
-};
-
-const createWorkbookBuffer = async () => {
-  const workbook = new ExcelJS.Workbook();
-  workbook.creator = "AFS Backend";
-  workbook.created = new Date();
-  workbook.modified = new Date();
-
-  const summary = workbook.addWorksheet("Summary");
-  summary.columns = [
-    { header: "Sheet", key: "sheet", width: 28 },
-    { header: "Records", key: "records", width: 14 },
-    { header: "Generated At", key: "generatedAt", width: 28 },
-  ];
-  summary.getRow(1).font = { bold: true };
-
-  for (const sheet of BACKUP_SHEETS) {
-    const rows = await sheet.model
-      .find({})
-      .setOptions({ _skipDeletedFilter: true })
-      .sort(sheet.sort)
-      .lean({ virtuals: false });
-
-    addSheet(workbook, sheet.name, rows);
-    summary.addRow({
-      sheet: sheet.name,
-      records: rows.length,
+// Write one document at a time instead of holding the entire database in memory.
+const createJsonBackup = async () => {
+  await cleanupExpiredBackups();
+  const id = randomBytes(24).toString("hex");
+  const target = filePath(id);
+  const handle = await fs.open(target, "wx", 0o600);
+  try {
+    await handle.writeFile(JSON.stringify({
+      formatVersion: 1,
       generatedAt: new Date().toISOString(),
+      exportType: "sanitized-data-export",
+    }).slice(0, -1) + ',"collections":{');
+    let firstCollection = true;
+    for (const { model, sort } of BACKUP_COLLECTIONS) {
+      await handle.writeFile((firstCollection ? "" : ",") +
+        JSON.stringify(model.collection.name) + ":[");
+      firstCollection = false;
+      const cursor = model.find({}).setOptions({ _skipDeletedFilter: true })
+        .sort(sort).lean({ virtuals: false }).cursor();
+      try {
+        let first = true;
+        for await (const row of cursor) {
+          await handle.writeFile((first ? "" : ",") + JSON.stringify(sanitize(row)));
+          first = false;
+        }
+      } finally {
+        await cursor.close();
+      }
+      await handle.writeFile("]");
+    }
+    await handle.writeFile("}}\n");
+  } catch (error) {
+    await handle.close();
+    await fs.unlink(target).catch(() => {});
+    throw error;
+  }
+  await handle.close();
+  return { id, fileName: path.basename(target), path: target };
+};
+
+const sign = (value) => createHmac("sha256", env.JWT_SECRET)
+  .update(`backup-download:${value}`).digest("hex");
+
+const createDownloadToken = (id, expiresAt) => {
+  const value = `${id}.${expiresAt}`;
+  return `${value}.${sign(value)}`;
+};
+
+const resolveDownload = async (token) => {
+  if (typeof token !== "string" || !/^[a-f0-9]{48}\.[0-9]{13}\.[a-f0-9]{64}$/.test(token)) {
+    throw ApiError.unauthorized("Invalid backup download link.");
+  }
+  const [id, expiry, signature] = token.split(".");
+  const expected = sign(`${id}.${expiry}`);
+  if (!timingSafeEqual(Buffer.from(signature, "hex"), Buffer.from(expected, "hex"))) {
+    throw ApiError.unauthorized("Invalid backup download link.");
+  }
+  if (Date.now() >= Number(expiry)) throw new ApiError(410, "Backup download link has expired.");
+  const target = filePath(id);
+  try {
+    await fs.access(target);
+  } catch (error) {
+    if (error.code === "ENOENT") throw ApiError.notFound("Backup file is no longer available.");
+    throw error;
+  }
+  return { path: target, fileName: path.basename(target) };
+};
+
+const emailJsonBackup = async () => {
+  const required = ["SMTP_USER", "SMTP_PASS", "BACKUP_EMAIL_TO", "BACKUP_PUBLIC_BASE_URL"];
+  const missing = required.filter((key) => !env[key]?.trim());
+  if (!env.SMTP_HOST && !env.SMTP_SERVICE) missing.push("SMTP_HOST or SMTP_SERVICE");
+  if (missing.length) throw ApiError.badRequest(`Backup email configuration missing: ${missing.join(", ")}`);
+  const base = new URL(env.BACKUP_PUBLIC_BASE_URL);
+  if (base.username || base.password || base.search || base.hash ||
+      (base.protocol !== "https:" && !(env.NODE_ENV !== "production" && base.protocol === "http:"))) {
+    throw ApiError.badRequest("BACKUP_PUBLIC_BASE_URL must be an HTTPS API base URL without credentials, query, or fragment.");
+  }
+  const transport = nodemailer.createTransport({
+    ...(env.SMTP_SERVICE ? { service: env.SMTP_SERVICE } : {
+      host: env.SMTP_HOST, port: env.SMTP_PORT, secure: env.SMTP_PORT === 465,
+    }),
+    requireTLS: true,
+    auth: { user: env.SMTP_USER, pass: env.SMTP_PASS },
+    connectionTimeout: 15000, greetingTimeout: 15000, socketTimeout: 60000,
+  });
+  // Reject bad SMTP configuration before doing the database export.
+  await transport.verify();
+  const backup = await createJsonBackup();
+  const expiresAt = Date.now() + retentionMs();
+  const link = new URL("/api/v1/backups/download", base);
+  link.searchParams.set("token", createDownloadToken(backup.id, expiresAt));
+  try {
+    const result = await transport.sendMail({
+      from: env.SMTP_FROM || env.SMTP_USER,
+      to: env.BACKUP_EMAIL_TO,
+      subject: "Finance system JSON backup download",
+      text: `Your JSON data export is ready.\n\nDownload: ${link.href}\n\nExpires: ${new Date(expiresAt).toISOString()}\nAnyone with this link can download the file until it expires. Keep it private.\nThis export excludes authentication secrets and selected encrypted identity fields.`,
     });
+    if (!result.accepted?.length || result.rejected?.length) {
+      throw ApiError.serviceUnavailable("Backup email was not accepted for all configured recipients.");
+    }
+  } catch (error) {
+    await fs.unlink(backup.path).catch(() => {});
+    throw error;
   }
-
-  return Buffer.from(await workbook.xlsx.writeBuffer());
+  return { fileName: backup.fileName, expiresAt: new Date(expiresAt).toISOString() };
 };
 
-const getDriveAuth = () => {
-  let credentials;
-
-  if (env.GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON_BASE64) {
-    credentials = JSON.parse(
-      Buffer.from(env.GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON_BASE64, "base64").toString("utf8"),
-    );
-  } else if (env.GOOGLE_DRIVE_SERVICE_ACCOUNT_EMAIL && env.GOOGLE_DRIVE_PRIVATE_KEY) {
-    credentials = {
-      client_email: env.GOOGLE_DRIVE_SERVICE_ACCOUNT_EMAIL,
-      private_key: env.GOOGLE_DRIVE_PRIVATE_KEY.replace(/\\n/g, "\n"),
-    };
-  }
-
-  if (!credentials) {
-    throw ApiError.badRequest(
-      "Google Drive backup is not configured. Set GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON_BASE64 or service account email/private key.",
-    );
-  }
-
-  return new google.auth.JWT({
-    email: credentials.client_email,
-    key: credentials.private_key,
-    scopes: ["https://www.googleapis.com/auth/drive.file"],
-  });
-};
-
-const uploadBackupToDrive = async ({ buffer, fileName }) => {
-  if (!env.GOOGLE_DRIVE_FOLDER_ID) {
-    throw ApiError.badRequest("GOOGLE_DRIVE_FOLDER_ID is not set.");
-  }
-
-  const drive = google.drive({ version: "v3", auth: getDriveAuth() });
-  const response = await drive.files.create({
-    requestBody: {
-      name: fileName,
-      parents: [env.GOOGLE_DRIVE_FOLDER_ID],
-      mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    },
-    media: {
-      mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      body: Readable.from(buffer),
-    },
-    fields: "id,name,webViewLink,webContentLink",
-  });
-
-  return response.data;
-};
-
-const createBackupWorkbook = async () => {
-  const fileName = buildBackupFileName();
-  const buffer = await createWorkbookBuffer();
-  return { fileName, buffer };
-};
-
-module.exports = {
-  createBackupWorkbook,
-  uploadBackupToDrive,
-};
+module.exports = { createJsonBackup, emailJsonBackup, resolveDownload, cleanupExpiredBackups };

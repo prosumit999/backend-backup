@@ -3,29 +3,29 @@
 const asyncHandler = require("../utils/asyncHandler");
 const ApiResponse = require("../utils/ApiResponse");
 const backupService = require("../services/backup.service");
+const { runBackupJob } = require("../jobs/backup.job");
 
-const EXCEL_MIME =
-  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
-
-const downloadExcelBackup = asyncHandler(async (_req, res) => {
-  const { fileName, buffer } = await backupService.createBackupWorkbook();
-
-  res.setHeader("Content-Type", EXCEL_MIME);
-  res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`);
-  res.setHeader("Content-Length", buffer.length);
-  return res.status(200).send(buffer);
-});
-
-const uploadExcelBackupToDrive = asyncHandler(async (_req, res) => {
-  const { fileName, buffer } = await backupService.createBackupWorkbook();
-  const file = await backupService.uploadBackupToDrive({ buffer, fileName });
-
-  return res
-    .status(201)
-    .json(new ApiResponse(201, { file }, "Backup uploaded to Google Drive"));
-});
-
-module.exports = {
-  downloadExcelBackup,
-  uploadExcelBackupToDrive,
+const sendFile = (res, next, file) => {
+  res.setHeader("Content-Type", "application/json; charset=utf-8");
+  res.setHeader("Cache-Control", "no-store");
+  res.setHeader("Referrer-Policy", "no-referrer");
+  return res.download(file.path, file.fileName, (error) => {
+    if (error) next(error);
+  });
 };
+
+const downloadJsonBackup = asyncHandler(async (_req, res, next) => {
+  return sendFile(res, next, await backupService.createJsonBackup());
+});
+
+const downloadLinkedBackup = asyncHandler(async (req, res, next) => {
+  return sendFile(res, next, await backupService.resolveDownload(req.query.token));
+});
+
+const emailJsonBackup = asyncHandler(async (_req, res) => {
+  const backup = await runBackupJob({ trigger: "manual" });
+  if (!backup) return res.status(409).json({ success: false, message: "A backup is already running." });
+  return res.status(201).json(new ApiResponse(201, backup, "JSON backup download link emailed"));
+});
+
+module.exports = { downloadJsonBackup, downloadLinkedBackup, emailJsonBackup };

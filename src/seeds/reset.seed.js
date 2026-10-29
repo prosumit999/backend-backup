@@ -2,7 +2,7 @@
 // ⚠️  DANGER — drops all collections then re-seeds
 // NEVER run in production
 // Command: node src/seeds/reset.seed.js
-require("dotenv").config();
+require("../config/load-env");
 
 const mongoose = require("mongoose");
 

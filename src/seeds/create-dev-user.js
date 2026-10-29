@@ -6,12 +6,12 @@
 //   node src/seeds/create-dev-user.js           → create if not exists
 //   node src/seeds/create-dev-user.js --reset   → delete & recreate
 //
-// Credentials are read from .env:
-//   DEV_USER_PHONE    = 9000000000
-//   DEV_USER_PASSWORD = Dev@Vendor#2024
-//   DEV_USER_CODE     = DEV-0001
+// Set DEV_USER_PHONE and DEV_USER_PASSWORD in .env.
+// DEV_USER_CODE optionally configures the account code.
 // ─────────────────────────────────────────────────────────
-require("dotenv").config();
+require("../config/load-env");
+
+const requireSeedEnv = require("./require-seed-env");
 
 const mongoose = require("mongoose");
 const User = require("../models/User.model");
@@ -31,19 +31,19 @@ const err  = (msg) => console.log(`${RED}❌ ${msg}${RESET}`);
 const info = (msg) => console.log(`${CYAN}ℹ️  ${msg}${RESET}`);
 
 // ── Read credentials from .env ────────────────────────────
-const DEV_PHONE    = process.env.DEV_USER_PHONE    || "9689974617";
-const DEV_PASSWORD = process.env.DEV_USER_PASSWORD || "Sandhyasoft99";
+const DEV_PHONE    = process.env.DEV_USER_PHONE;
+const DEV_PASSWORD = process.env.DEV_USER_PASSWORD;
 const DEV_CODE     = process.env.DEV_USER_CODE     || "DEV-0001";
 
 const isReset = process.argv.includes("--reset");
 
 // ─────────────────────────────────────────────────────────
 const run = async () => {
+  requireSeedEnv(["MONGO_URI", "DEV_USER_PHONE", "DEV_USER_PASSWORD"]);
   console.log("\n" + "═".repeat(55));
   console.log(`${CYAN}${BOLD}  👤 DEV USER CREATION — PIGMY FINANCE${RESET}`);
   console.log("═".repeat(55));
   console.log(`${CYAN}  Mode   :${RESET} ${isReset ? RED + "RESET (existing user will be deleted)" + RESET : "CREATE (skip if already exists)"}`);
-  console.log(`${CYAN}  Phone  :${RESET} ${DEV_PHONE}`);
   console.log(`${CYAN}  Code   :${RESET} ${DEV_CODE}`);
   console.log("═".repeat(55) + "\n");
 
@@ -61,7 +61,7 @@ const run = async () => {
   if (isReset) {
     const deleted = await User.findOneAndDelete({ phone: DEV_PHONE });
     if (deleted) {
-      warn(`Existing dev user deleted (Phone: ${DEV_PHONE})`);
+      warn("Existing dev user deleted");
     } else {
       info("No existing dev user found — will create fresh.");
     }
@@ -71,7 +71,7 @@ const run = async () => {
   // ── Check for existing user ───────────────────────────────
   const existing = await User.findOne({ phone: DEV_PHONE }).lean();
   if (existing) {
-    warn(`Dev user already exists (Phone: ${DEV_PHONE}) — skipping.`);
+    warn("Dev user already exists — skipping.");
     warn("Run with --reset flag to recreate: npm run create-dev -- --reset");
     await mongoose.disconnect();
     process.exit(0);
@@ -91,14 +91,7 @@ const run = async () => {
   console.log(`${GREEN}${BOLD}  🎉 DEV USER CREATED SUCCESSFULLY!${RESET}`);
   console.log("═".repeat(55));
   console.log("");
-  console.log(`  ${CYAN}Dev Panel Login Credentials:${RESET}`);
-  console.log(`  ┌─────────────────────────────────────────┐`);
-  console.log(`  │  Phone    → ${DEV_PHONE.padEnd(28)}│`);
-  console.log(`  │  Password → ${DEV_PASSWORD.padEnd(28)}│`);
-  console.log(`  │  Code     → ${DEV_CODE.padEnd(28)}│`);
-  console.log(`  │  Role     → dev                         │`);
-  console.log(`  └─────────────────────────────────────────┘`);
-  console.log("");
+  info("Login with the credentials configured in your environment.");
   console.log(`  ${CYAN}Login endpoint:${RESET} POST /api/v1/auth/login`);
   console.log(`  ${YELLOW}⚠️  Change the password after first login in production!${RESET}`);
   console.log("");

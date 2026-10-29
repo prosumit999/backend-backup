@@ -4,3 +4,6 @@ node_modules/
 logs/
 backend/
 .gitignore
+
+# Private generated backup downloads
+backups/

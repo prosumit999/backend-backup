@@ -12,15 +12,14 @@ const runBackupJob = async ({ trigger = "scheduled" } = {}) => {
   }
 
   try {
-    logger.info(`[BackupJob] Starting ${trigger} Google Drive backup.`);
-    const { fileName, buffer } = await backupService.createBackupWorkbook();
-    const file = await backupService.uploadBackupToDrive({ fileName, buffer });
+    logger.info(`[BackupJob] Starting ${trigger} JSON email backup.`);
+    const backup = await backupService.emailJsonBackup();
 
     logger.info(
-      `[BackupJob] Completed ${trigger} backup | File: ${file.name} | ID: ${file.id}`,
+      `[BackupJob] Completed ${trigger} backup | File: ${backup.fileName}`,
     );
 
-    return file;
+    return backup;
   } catch (err) {
     logger.error(`[BackupJob] ${trigger} backup failed: ${err.message}`);
     throw err;

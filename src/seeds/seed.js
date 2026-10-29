@@ -3,7 +3,9 @@
 // Master seed — run once before first Postman test
 // Command: node src/seeds/seed.js
 // ─────────────────────────────────────────────────────────
-require("dotenv").config();
+require("../config/load-env");
+
+const requireSeedEnv = require("./require-seed-env");
 
 const mongoose = require("mongoose");
 const User = require("../models/User.model");
@@ -32,16 +34,13 @@ const info = (msg) => console.log(`${CYAN}ℹ️  ${msg}${RESET}`);
 const seedDevUser = async () => {
   info("Seeding dev user...");
 
-  // Credentials can be overridden via environment variables.
-  // Default phone: 9000000000 (must pass 10-digit Indian mobile validation).
-  // IMPORTANT: Change the password after first login on production!
-  const DEV_PHONE = process.env.DEV_USER_PHONE || "8010952940";
-  const DEV_PASSWORD = process.env.DEV_USER_PASSWORD || "100%Prosumit";
+  const DEV_PHONE = process.env.DEV_USER_PHONE;
+  const DEV_PASSWORD = process.env.DEV_USER_PASSWORD;
   const DEV_CODE = process.env.DEV_USER_CODE || "DEV-0001";
 
   const existing = await User.findOne({ phone: DEV_PHONE });
   if (existing) {
-    warn(`Dev user already exists (Phone: ${DEV_PHONE}) — skipping`);
+    warn("Dev user already exists — skipping");
     return existing;
   }
 
@@ -54,7 +53,7 @@ const seedDevUser = async () => {
     isActive: true,
   });
 
-  log(`Dev user created | Phone: ${DEV_PHONE} | Password: ${DEV_PASSWORD} | Code: ${DEV_CODE}`);
+  log("Dev user created using credentials from the environment");
   return devUser;
 };
 
@@ -64,7 +63,7 @@ const seedDevUser = async () => {
 const seedSuperAdmin = async () => {
   info("Seeding superadmin...");
 
-  const existing = await User.findOne({ phone: "7719977794" });
+  const existing = await User.findOne({ phone: process.env.ADMIN_Phone });
   if (existing) {
     warn("Superadmin already exists — skipping");
     return existing;
@@ -79,10 +78,7 @@ const seedSuperAdmin = async () => {
     agentCode: null,
   });
 
-  console.log(process.env.ADMIN_Name + "Admin Created");
-  console.log(process.env.ADMIN_Phone + "Admin with this phone created");
-  console.log(process.env.ADMIN_PASS + "Admin With This Pass Created"
-  )
+  log("Superadmin created using credentials from the environment");
   return admin;
 };
 
@@ -249,6 +245,7 @@ const run = async () => {
   console.log("═".repeat(55) + "\n");
 
   try {
+    requireSeedEnv(["MONGO_URI", "DEV_USER_PHONE", "DEV_USER_PASSWORD", "ADMIN_Name", "ADMIN_Phone", "ADMIN_PASS"]);
     info("Connecting to MongoDB...");
     await mongoose.connect(process.env.MONGO_URI);
     log(`MongoDB connected: ${mongoose.connection.host}`);
@@ -282,16 +279,7 @@ const run = async () => {
     );
     console.log("═".repeat(55));
     console.log("");
-    console.log(`  ${CYAN}Superadmin Credentials:${RESET}`);
-    console.log(`  Phone    → 9999999999`);
-    console.log(`  Password → Admin@1234`);
-    console.log(`  Role     → superadmin`);
-    console.log("");
-    console.log(`  ${CYAN}Dev User Credentials:${RESET}`);
-    console.log(`  Phone    → ${process.env.DEV_USER_PHONE || '9000000000'}`);
-    console.log(`  Password → ${process.env.DEV_USER_PASSWORD || 'Dev@Vendor#2024'}`);
-    console.log(`  Role     → dev`);
-    console.log("");
+    info("Login with the credentials configured in your environment.");
     console.log(`  ${CYAN}POST /api/v1/auth/login${RESET}`);
     console.log("");
   } catch (error) {

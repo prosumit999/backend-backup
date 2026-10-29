@@ -122,10 +122,12 @@ app.use(express.urlencoded({ extended: false, limit: "10kb" }));
 // ─── 5. NoSQL Injection Prevention ───────────────────────
 app.use(mongoSanitize());
 
+morgan.token("safe-path", (req) => req.path);
+
 // ─── 6. Request Logging ───────────────────────────────────
 // Minimal format — avoid logging query strings that may contain PII.
 app.use(
-  morgan(":method :url :status :response-time ms - :res[content-length]", {
+  morgan(":method :safe-path :status :response-time ms - :res[content-length]", {
     stream: { write: (msg) => logger.info(msg.trim()) },
   }),
 );
@@ -208,11 +210,11 @@ app.use("/api/v1", routes);
 
 // ─── 404 Handler ──────────────────────────────────────────
 app.use((req, res) => {
-  logger.warn(`[404] ${req.method} ${req.originalUrl} | ReqID: ${req.id}`);
+  logger.warn(`[404] ${req.method} ${req.path} | ReqID: ${req.id}`);
   res.status(404).json({
     success: false,
     requestId: req.id,
-    message: `Route [${req.method}] ${req.originalUrl} not found.`,
+    message: `Route [${req.method}] ${req.path} not found.`,
   });
 });
 
@@ -227,7 +229,7 @@ app.use((err, req, res, next) => {
     requestId: req.id,
     status: statusCode,
     method: req.method,
-    url: req.originalUrl,
+    url: req.path,
     userId: req.user?._id || "unauthenticated",
     message: err.message,
     stack: env.NODE_ENV !== "production" ? err.stack : undefined,

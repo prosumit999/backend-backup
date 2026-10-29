@@ -198,17 +198,17 @@ const scheduleReconcileJob = () => {
 };
 
 // ── START — called once from server.js after DB connection is ready ────────────
-// JOB 5: GOOGLE DRIVE BACKUP -- 1:00 AM IST
+// JOB 5: JSON EMAIL BACKUP -- 1:00 AM IST
 const scheduleBackupJob = () => {
   if (!env.BACKUP_DAILY_ENABLED) {
-    logger.info("[Scheduler] Daily Google Drive backup disabled.");
+    logger.info("[Scheduler] Daily JSON email backup disabled.");
     return;
   }
 
   cron.schedule(
     "0 1 * * *",
     async () => {
-      logger.info("[Scheduler] Google Drive backup job triggered at 01:00 IST");
+      logger.info("[Scheduler] JSON email backup job triggered at 01:00 IST");
 
       if (jobRunning.backup) {
         logger.warn("[Scheduler] Backup job SKIPPED -- previous run still in progress.");
@@ -230,6 +230,8 @@ const scheduleBackupJob = () => {
 
 const runStartupBackup = () => {
   if (!env.BACKUP_ON_STARTUP) return;
+
+  logger.info(`[Scheduler] Startup JSON backup email scheduled in ${env.BACKUP_STARTUP_DELAY_MS}ms.`);
 
   setTimeout(async () => {
     if (jobRunning.backup) {

@@ -36,7 +36,7 @@ router.use("/loans", require("./loan.routes"));
 // ── Reports ───────────────────────────────────────────────
 router.use("/reports", require("./report.routes"));
 
-// Data backups (Excel download + Google Drive upload)
+// Data backups (JSON download + emailed download links)
 router.use("/backups", require("./backup.routes"));
 
 // ── Day Control (open / close business day) ───────────────

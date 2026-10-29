@@ -6,7 +6,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 "use strict";
 
-require("dotenv").config();
+require("./load-env");
 
 const _env = {
   // ── Server ────────────────────────────────────────────────────────────────
@@ -44,14 +44,19 @@ const _env = {
   CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY,
   CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET,
   CLOUDINARY_BASE_FOLDER: process.env.CLOUDINARY_BASE_FOLDER || "kycdocs",
-  GOOGLE_DRIVE_FOLDER_ID: process.env.GOOGLE_DRIVE_FOLDER_ID || null,
-  GOOGLE_DRIVE_SERVICE_ACCOUNT_EMAIL:
-    process.env.GOOGLE_DRIVE_SERVICE_ACCOUNT_EMAIL || null,
-  GOOGLE_DRIVE_PRIVATE_KEY: process.env.GOOGLE_DRIVE_PRIVATE_KEY || null,
-  GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON_BASE64:
-    process.env.GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON_BASE64 || null,
+  // Email delivery and private storage for JSON backup links.
+  SMTP_USER: process.env.SMTP_USER,
+  SMTP_PASS: process.env.SMTP_PASS,
+  SMTP_HOST: process.env.SMTP_HOST,
+  SMTP_SERVICE: process.env.SMTP_SERVICE,
+  SMTP_PORT: Number(process.env.SMTP_PORT || 587),
+  SMTP_FROM: process.env.SMTP_FROM,
+  BACKUP_EMAIL_TO: process.env.BACKUP_EMAIL_TO,
+  BACKUP_PUBLIC_BASE_URL: process.env.BACKUP_PUBLIC_BASE_URL,
+  BACKUP_STORAGE_DIR: process.env.BACKUP_STORAGE_DIR || require("path").resolve(__dirname, "../../backups"),
+  BACKUP_LINK_TTL_HOURS: Number(process.env.BACKUP_LINK_TTL_HOURS || 24),
   BACKUP_DAILY_ENABLED: process.env.BACKUP_DAILY_ENABLED !== "false",
-  BACKUP_ON_STARTUP: process.env.BACKUP_ON_STARTUP === "true",
+  BACKUP_ON_STARTUP: process.env.BACKUP_ON_STARTUP !== "false",
   BACKUP_STARTUP_DELAY_MS:
     parseInt(process.env.BACKUP_STARTUP_DELAY_MS, 10) || 15000,
 
@@ -193,6 +198,13 @@ if (_env.NODE_ENV === "production") {
         "      Example: ALLOWED_ORIGINS=https://app.myfinance.com",
     );
   }
+}
+
+if (!Number.isFinite(_env.BACKUP_LINK_TTL_HOURS) || _env.BACKUP_LINK_TTL_HOURS <= 0) {
+  throw new Error("BACKUP_LINK_TTL_HOURS must be a positive number.");
+}
+if (!Number.isInteger(_env.SMTP_PORT) || _env.SMTP_PORT < 1 || _env.SMTP_PORT > 65535) {
+  throw new Error("SMTP_PORT must be a valid port number.");
 }
 
 module.exports = Object.freeze(_env);
