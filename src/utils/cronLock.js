@@ -49,6 +49,13 @@ const acquireLock = async (lockKey, maxAgeMinutes = 30) => {
         { value: false },
         { value: null },
         { "meta.lockedAt": { $lt: expireTime } },
+        // Recover old locks written before metadata was included in the schema.
+        // Keep the normal lease timeout to avoid interrupting a running job.
+        {
+          value: true,
+          "meta.lockedAt": { $exists: false },
+          updatedAt: { $lt: expireTime },
+        },
       ],
     },
     {

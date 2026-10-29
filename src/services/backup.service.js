@@ -175,7 +175,10 @@ const emailJsonBackup = async () => {
   // Reject bad SMTP configuration before doing the database export.
   await transport.verify();
   const backup = await createJsonBackup();
-  const expiresAt = Date.now() + retentionMs();
+  const issuedAt = new Date();
+  // Match file retention to the link issuance time, after export completes.
+  await fs.utimes(backup.path, issuedAt, issuedAt);
+  const expiresAt = issuedAt.getTime() + retentionMs();
   const link = new URL("/api/v1/backups/download", base);
   link.searchParams.set("token", createDownloadToken(backup.id, expiresAt));
   try {

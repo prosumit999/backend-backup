@@ -46,6 +46,12 @@ const AppConfigSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    // Cron locks must persist ownership and timestamps for release/recovery.
+    meta: {
+      lockedAt: Date,
+      releasedAt: Date,
+      instance: String,
+    },
     updatedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",

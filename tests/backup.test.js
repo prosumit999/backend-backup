@@ -15,7 +15,7 @@ async function fixture(t, options = {}) {
   const env = {
     JWT_SECRET: "test-only-signing-key",
     BACKUP_STORAGE_DIR: directory,
-    BACKUP_LINK_TTL_HOURS: 24,
+    BACKUP_LINK_TTL_HOURS: 168,
     BACKUP_PUBLIC_BASE_URL: "https://api.example.test",
     SMTP_HOST: "smtp.example.test", SMTP_PORT: 587,
     SMTP_USER: "sender@example.test", SMTP_PASS: "test-only",
@@ -62,7 +62,11 @@ async function fixture(t, options = {}) {
 
 test("emails a link to a valid nested JSON export and rejects tampered, expired, and missing links", async (t) => {
   const { service, directory, mails, env } = await fixture(t);
+  const before = Date.now();
   const result = await service.emailJsonBackup();
+  const lifetime = 7 * 24 * 60 * 60 * 1000;
+  assert.ok(Date.parse(result.expiresAt) >= before + lifetime);
+  assert.ok(Date.parse(result.expiresAt) <= Date.now() + lifetime);
   assert.match(result.fileName, /\.json$/);
   assert.equal(mails[0].to, env.BACKUP_EMAIL_TO);
   const link = new URL(mails[0].text.match(/Download: (\S+)/)[1]);
@@ -106,9 +110,22 @@ test("removes partial files and files whose email could not be sent", async (t) 
 test("cleans expired backups without removing other files", async (t) => {
   const { service, directory } = await fixture(t);
   const backup = await service.createJsonBackup();
-  const old = new Date(Date.now() - 25 * 60 * 60 * 1000);
+  const old = new Date(Date.now() - 169 * 60 * 60 * 1000);
   await fs.utimes(backup.path, old, old);
   await fs.writeFile(path.join(directory, "keep.txt"), "keep");
   await service.cleanupExpiredBackups();
   assert.deepEqual(await fs.readdir(directory), ["keep.txt"]);
+});
+
+test("a redeployment can serve the existing link and a later backup retains it for the week", async (t) => {
+  const first = await fixture(t);
+  await first.service.emailJsonBackup();
+  const token = new URL(first.mails[0].text.match(/Download: (\S+)/)[1]).searchParams.get("token");
+  const file = await first.service.resolveDownload(token);
+  const sixDaysAgo = new Date(Date.now() - 6 * 24 * 60 * 60 * 1000);
+  await fs.utimes(file.path, sixDaysAgo, sixDaysAgo);
+  const restarted = await fixture(t, { env: { BACKUP_STORAGE_DIR: first.directory } });
+  await restarted.service.emailJsonBackup();
+  assert.equal((await restarted.service.resolveDownload(token)).path, file.path);
+  assert.equal((await fs.readdir(first.directory)).length, 2);
 });

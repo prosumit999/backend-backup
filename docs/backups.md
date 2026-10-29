@@ -1,6 +1,6 @@
 # JSON backups by email
 
-Backups run at 01:00 Asia/Kolkata each day when BACKUP_DAILY_ENABLED=true,
+Backups run every Sunday at 01:00 Asia/Kolkata when BACKUP_WEEKLY_ENABLED=true,
 and after every backend startup by default, including deployments, redeployments,
 and process restarts. Startup delivery begins 15 seconds after the database is
 ready; SMTP delivery and export time are additional. Set BACKUP_ON_STARTUP=false
@@ -18,9 +18,9 @@ SMTP_PASS=
 SMTP_FROM=
 BACKUP_EMAIL_TO=
 BACKUP_PUBLIC_BASE_URL=https://api.abhishekfinance.cloud
-BACKUP_LINK_TTL_HOURS=24
+BACKUP_LINK_TTL_HOURS=168
 BACKUP_STORAGE_DIR=/var/lib/abhifinance/backups
-BACKUP_DAILY_ENABLED=true
+BACKUP_WEEKLY_ENABLED=true
 BACKUP_ON_STARTUP=true
 ```
 
@@ -28,7 +28,10 @@ Set SMTP_HOST to your provider's SMTP hostname, or set SMTP_SERVICE to a
 Nodemailer service preset. Port 465 uses implicit TLS; port 587 requires STARTTLS.
 SMTP_FROM defaults to SMTP_USER. BACKUP_EMAIL_TO is the destination address (or
 comma-separated addresses). The recipient is configured only on the server.
-Fill in the blank values before enabling delivery.
+Fill in the blank values before enabling delivery. Set BACKUP_LINK_TTL_HOURS=168
+in Coolify as well: an existing value of 24 overrides the new seven-day default.
+BACKUP_DAILY_ENABLED is no longer used; replace it with BACKUP_WEEKLY_ENABLED.
+Already emailed links retain their original expiry; only new links get seven days.
 
 Install dependencies with `npm ci` and restart the backend after configuration.
 SMTP acceptance does not guarantee inbox delivery; check the recipient's spam

@@ -198,17 +198,17 @@ const scheduleReconcileJob = () => {
 };
 
 // ── START — called once from server.js after DB connection is ready ────────────
-// JOB 5: JSON EMAIL BACKUP -- 1:00 AM IST
+// JOB 5: JSON EMAIL BACKUP -- SUNDAY 1:00 AM IST
 const scheduleBackupJob = () => {
-  if (!env.BACKUP_DAILY_ENABLED) {
-    logger.info("[Scheduler] Daily JSON email backup disabled.");
+  if (!env.BACKUP_WEEKLY_ENABLED) {
+    logger.info("[Scheduler] Weekly JSON email backup disabled.");
     return;
   }
 
   cron.schedule(
-    "0 1 * * *",
+    "0 1 * * 0",
     async () => {
-      logger.info("[Scheduler] JSON email backup job triggered at 01:00 IST");
+      logger.info("[Scheduler] Weekly JSON email backup job triggered Sunday at 01:00 IST");
 
       if (jobRunning.backup) {
         logger.warn("[Scheduler] Backup job SKIPPED -- previous run still in progress.");
@@ -270,7 +270,7 @@ const startScheduler = () => {
         "MISSED_DAY_22:00_IST",
         "DEFICIT_WARNING_22:30_IST",
         "RECONCILE_23:00_IST",
-        "BACKUP_01:00_IST",
+        "BACKUP_SUNDAY_01:00_IST",
       ],
       backupOnStartup: env.BACKUP_ON_STARTUP,
     },

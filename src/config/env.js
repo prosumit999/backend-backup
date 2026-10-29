@@ -54,8 +54,8 @@ const _env = {
   BACKUP_EMAIL_TO: process.env.BACKUP_EMAIL_TO,
   BACKUP_PUBLIC_BASE_URL: process.env.BACKUP_PUBLIC_BASE_URL,
   BACKUP_STORAGE_DIR: process.env.BACKUP_STORAGE_DIR || require("path").resolve(__dirname, "../../backups"),
-  BACKUP_LINK_TTL_HOURS: Number(process.env.BACKUP_LINK_TTL_HOURS || 24),
-  BACKUP_DAILY_ENABLED: process.env.BACKUP_DAILY_ENABLED !== "false",
+  BACKUP_LINK_TTL_HOURS: Number(process.env.BACKUP_LINK_TTL_HOURS || 168),
+  BACKUP_WEEKLY_ENABLED: process.env.BACKUP_WEEKLY_ENABLED !== "false",
   BACKUP_ON_STARTUP: process.env.BACKUP_ON_STARTUP !== "false",
   BACKUP_STARTUP_DELAY_MS:
     parseInt(process.env.BACKUP_STARTUP_DELAY_MS, 10) || 15000,
