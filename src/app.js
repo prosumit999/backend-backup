@@ -74,8 +74,6 @@ app.use((_req, res, next) => {
 });
 
 // ─── 3. CORS ──────────────────────────────────────────────
-
-// ─── 3. CORS ──────────────────────────────────────────────
 app.use(
   cors({
     origin: (origin, callback) => {
@@ -85,6 +83,7 @@ app.use(
       const allowed = [
         "http://localhost:5173",
         "http://localhost:3000",
+        "https://abhishekfinance.cloud",
         "https://demofin.sandhyasofttech.com",
         "http://demofin.sandhyasofttech.com",
       ];
