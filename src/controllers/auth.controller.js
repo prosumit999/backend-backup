@@ -40,6 +40,12 @@ const REFRESH_COOKIE_OPTIONS = {
   maxAge: parseExpiryMs(env.JWT_REFRESH_EXPIRES_IN),
 };
 
+const refreshCookieOptions = (staySignedIn) => {
+  const options = { ...REFRESH_COOKIE_OPTIONS };
+  if (!staySignedIn) delete options.maxAge;
+  return options;
+};
+
 // clearCookie MUST use identical options (especially path) — otherwise the
 // browser does not find the cookie to clear and it silently stays alive.
 const CLEAR_COOKIE_OPTIONS = {
@@ -55,7 +61,7 @@ const CLEAR_COOKIE_OPTIONS = {
 // POST /api/v1/auth/login
 // ─────────────────────────────────────────────────────────────────────────────
 const login = asyncHandler(async (req, res) => {
-  const { phone, password } = req.body;
+  const { phone, password, staySignedIn = false } = req.body;
 
   const result = await authService.login({
     phone,
@@ -63,9 +69,10 @@ const login = asyncHandler(async (req, res) => {
     ipAddress: req.ip,
     userAgent: req.headers["user-agent"],
     requestId: req.id,
+    staySignedIn,
   });
 
-  res.cookie("refreshToken", result.refreshToken, REFRESH_COOKIE_OPTIONS);
+  res.cookie("refreshToken", result.refreshToken, refreshCookieOptions(staySignedIn));
 
   return res.status(200).json(
     new ApiResponse(
@@ -99,7 +106,11 @@ const refreshToken = asyncHandler(async (req, res) => {
   });
 
   // Rotate cookie on every refresh
-  res.cookie("refreshToken", result.refreshToken, REFRESH_COOKIE_OPTIONS);
+  res.cookie(
+    "refreshToken",
+    result.refreshToken,
+    refreshCookieOptions(result.staySignedIn),
+  );
 
   return res.status(200).json(
     new ApiResponse(

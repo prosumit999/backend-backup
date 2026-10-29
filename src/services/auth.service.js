@@ -45,7 +45,7 @@ const _checkSystemLock = async (userRole) => {
 // ─────────────────────────────────────────────────────────────────────────────
 // LOGIN
 // ─────────────────────────────────────────────────────────────────────────────
-const login = async ({ phone, password, ipAddress, userAgent, requestId }) => {
+const login = async ({ phone, password, ipAddress, userAgent, requestId, staySignedIn = false }) => {
   // Step 1: Find user — same message for "not found" and "wrong password"
   // to prevent phone number enumeration
   const user = await User.findByPhone(phone);
@@ -122,7 +122,7 @@ const login = async ({ phone, password, ipAddress, userAgent, requestId }) => {
 
   // Step 7: Create new session
   const { accessToken: rawAccessToken, refreshToken: rawRefreshToken } =
-    await user.startNewSession();
+    await user.startNewSession(staySignedIn);
 
   await AuditLog.log({
     performedBy: user._id,
@@ -170,6 +170,7 @@ const login = async ({ phone, password, ipAddress, userAgent, requestId }) => {
     },
     accessToken: rawAccessToken,
     refreshToken: rawRefreshToken,
+    staySignedIn,
   };
 };
 
@@ -254,6 +255,7 @@ const refreshAccessToken = async ({
   return {
     accessToken: result.accessToken,
     refreshToken: result.refreshToken,
+    staySignedIn: decoded.staySignedIn === true,
   };
 };
 

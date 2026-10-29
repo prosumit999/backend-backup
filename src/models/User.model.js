@@ -270,6 +270,7 @@ userSchema.methods.verifyAndRotateRefreshToken = async function (
       jti: uuidv4(),
       fam: this.refreshTokenFamily,
       ver: nextVersion,
+      staySignedIn: decoded.staySignedIn === true,
     },
     env.JWT_REFRESH_SECRET,
     { expiresIn: env.JWT_REFRESH_EXPIRES_IN },
@@ -319,7 +320,7 @@ userSchema.methods.invalidateAllSessions = async function () {
 // ─────────────────────────────────────────────────────────────────────────────
 // INSTANCE: startNewSession (called after successful login)
 // ─────────────────────────────────────────────────────────────────────────────
-userSchema.methods.startNewSession = async function () {
+userSchema.methods.startNewSession = async function (staySignedIn = false) {
   const newFam = uuidv4();
   const newAccessToken = this.generateAccessToken();
   const newRefreshToken = jwt.sign(
@@ -328,6 +329,7 @@ userSchema.methods.startNewSession = async function () {
       jti: uuidv4(),
       fam: newFam,
       ver: 0,
+      staySignedIn: staySignedIn === true,
     },
     env.JWT_REFRESH_SECRET,
     { expiresIn: env.JWT_REFRESH_EXPIRES_IN },

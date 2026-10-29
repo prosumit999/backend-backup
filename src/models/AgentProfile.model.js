@@ -40,7 +40,6 @@ const addressSchema = new mongoose.Schema(
   { _id: false },
 );
 
-// ─── DOCUMENT META SUB-SCHEMA ─────────────────────────────
 const documentSchema = new mongoose.Schema(
   {
     url: { type: String, default: null },

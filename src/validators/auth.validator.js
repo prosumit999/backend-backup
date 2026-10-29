@@ -40,7 +40,11 @@ const strongPassword = Joi.string()
   });
 
 // ─── LOGIN ────────────────────────────────────────────────
-const loginSchema = Joi.object({ phone, password });
+const loginSchema = Joi.object({
+  phone,
+  password,
+  staySignedIn: Joi.boolean().default(false),
+});
 
 // ─── CHANGE PASSWORD ──────────────────────────────────────
 const changePasswordSchema = Joi.object({

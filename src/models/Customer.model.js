@@ -54,14 +54,6 @@ const customerSchema = new mongoose.Schema(
       trim: true,
       match: [/^[6-9]\d{9}$/, "Enter a valid 10-digit Indian mobile number"],
     },
-    email: {
-      type: String,
-      unique: true,
-      sparse: true,
-      lowercase: true,
-      trim: true,
-      match: [/^\S+@\S+\.\S+$/, "Enter a valid email address"],
-    },
     alternatePhone: {
       type: String,
       trim: true,

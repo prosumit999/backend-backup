@@ -2,7 +2,6 @@
 "use strict";
 
 const User = require("../models/User.model");
-const Customer = require("../models/Customer.model");
 const AgentProfile = require("../models/AgentProfile.model");
 const AgentOtp = require("../models/AgentOtp.model");
 const LedgerAccount = require("../models/LedgerAccount.model");
@@ -74,17 +73,6 @@ const createAgent = async ({
   if (existing)
     throw ApiError.conflict(`A user with phone ${phone} already exists.`);
 
-  const normalizedEmail = email?.trim().toLowerCase();
-  const customerWithEmail = normalizedEmail
-    ? await Customer.findOne({ email: normalizedEmail })
-      .setOptions({ _skipDeletedFilter: true })
-      .select("_id")
-      .lean()
-    : null;
-  if (customerWithEmail) {
-    throw ApiError.conflict("This email address is already registered.");
-  }
-
   const agentCode = await generateAgentCode();
   const agentLedgerCode = `AGNT-${agentCode}`;
 
@@ -103,7 +91,7 @@ const createAgent = async ({
           name,
           phone,
           password,
-          email: normalizedEmail || undefined,
+          email: email || undefined,
           role: ROLES.AGENT,
           agentCode,
           isActive: true,

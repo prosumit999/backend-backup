@@ -2,7 +2,6 @@
 "use strict";
 
 const User = require("../models/User.model");
-const Customer = require("../models/Customer.model");
 const AppConfig = require("../models/AppConfig.model");
 const AuditLog = require("../models/AuditLog.model");
 const LoanPlan = require("../models/LoanPlan.model");
@@ -70,17 +69,6 @@ const createAdmin = async ({
   if (existing)
     throw new ApiError(409, `A user with phone ${phone} already exists`);
 
-  const normalizedEmail = email?.trim().toLowerCase();
-  const customerWithEmail = normalizedEmail
-    ? await Customer.findOne({ email: normalizedEmail })
-      .setOptions({ _skipDeletedFilter: true })
-      .select("_id")
-      .lean()
-    : null;
-  if (customerWithEmail) {
-    throw new ApiError(409, "This email address is already registered");
-  }
-
   const adminCode = await generateAdminCode();
 
   let admin;
@@ -89,16 +77,13 @@ const createAdmin = async ({
       name,
       phone,
       password,
-      email: normalizedEmail || undefined,
+      email: email || undefined,
       role: ROLES.ADMIN,
       adminCode,
       isActive: true,
       createdBy,
     });
   } catch (err) {
-    if (err.code === 11000 && err.keyPattern?.email) {
-      throw new ApiError(409, "This email address is already registered");
-    }
     if (err.code === 11000) {
       throw new ApiError(409, `A user with phone ${phone} already exists`);
     }
